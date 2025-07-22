@@ -1,16 +1,15 @@
 #pragma once
-
-#include <iterator>
 #include <type_traits>
 #include <vector>
 #include <cstdlib>
-#include <concepts>
-#include <array>
 #include <cstring>
 #include <cassert>
-#include <memory>
 #include <iostream>
-#include <typeinfo>
+#include <array>
+
+#ifdef DEBUG
+#else
+#endif
 
 template <class T>
 concept hasPos = requires(T a) {
@@ -18,60 +17,76 @@ concept hasPos = requires(T a) {
     std::is_trivially_copyable<T>::value;
 };
 
-template <hasPos T, size_t threshhold = 4>
+template <hasPos T, size_t threshhold = 32>
 class Quadtree{
     public:
+    typedef T pt;
     struct Iterator{
         const Quadtree* parent;
         Iterator* child = NULL;
         size_t index = 0;
-
+        
         Iterator() : parent(NULL) {
-            fprintf(stdout, "%p: new Iterator(NULL)\n", this);
         }
-
+        
         ~Iterator() {
+            if (!parent) {
+                return;
+            }
             if (child && parent->size > threshhold) {
                 delete child;
                 child = NULL;
             }
-            fprintf(stdout, "delete %p\n", this);
         }
-
+        
         void initChild() {
-            fprintf(stdout, "%p.initChild()\n", this);
             for (; index < 4; index++) {
                 assert(child == NULL);
-                child = new Iterator();
-                *child = parent->subtrees[index].begin();
+                child = new Iterator(std::move(parent->subtrees[index].begin()));
                 if (*child != parent->subtrees[index].end()) {
                     break;
                 }
                 delete child;
                 child = NULL;
             }
-            fprintf(stdout, "index is now: %zu, child: %p\n", index, child);
         }
-
+        
         explicit Iterator(const Quadtree* self) : parent(self) {
-            fprintf(stdout, "%p: new Iterator(%p)\n", this, self);
             if (parent->size > threshhold) {
                 initChild();
             }
         }
-
+        
         Iterator(const Quadtree* parentTree, Iterator* childIterator, size_t idx)
         : parent(parentTree), child(childIterator), index(idx) {
-            fprintf(stdout, "%p: new Iterator(%p, %p, %zu)\n", this, parent, child, index);
+        }
+        
+        Iterator& operator=(Iterator&& moveFrom) {
+            this->~Iterator();
+            parent = moveFrom.parent;
+            child = moveFrom.child;
+            index = moveFrom.index;
+            moveFrom.parent = 0;
+            moveFrom.child = 0;
+            moveFrom.index = 0;
+            return *this;
+        }
+        
+        Iterator(Iterator&& moveFrom) :
+        parent(moveFrom.parent), child(moveFrom.child), index(moveFrom.index) {
+            moveFrom.child = 0;
+            moveFrom.index = 0;
+            moveFrom.parent = 0;
         }
 
         Iterator& operator++() {
-            fprintf(stdout, "%p.operator++() -> am I at the end? %d, %d\n", this, next(), *this == parent->end());
+            if(next()) {
+                // assert(*this == parent->end());
+            }
             return *this;
         }
 
         bool next() {
-            fprintf(stdout, "%p.next()\n", this);
             if (parent->size > threshhold) {
                 if (child->next()) {
                     delete child;
@@ -82,14 +97,20 @@ class Quadtree{
             } else {
                 index++;
             }
-            fprintf(stdout, "index is now: %zu\n", index);
-            return index == parent->size;
+            
+            // fprintf(stdout, "index far enough: %d, this == end: %d\n", parent->size > threshhold ? index == 4 : index == parent->size, (*this == parent->end()));
+            
+            assert((parent->size > threshhold ? index == 4 : index == parent->size) == (*this == parent->end()));
+            return parent->size > threshhold ? index == 4 : index == parent->size;
         }
-
+        
+        const T* operator->() const {
+            return &**this;
+        }
+        
         const T& operator*() const {
             if (parent->size > threshhold) {
                 if (!child) {
-                    fprintf(stderr, "tried dereferencing an invalid pointer, *this == parent->end(): %d\n", *this == parent->end());
                     exit(1);
                 }
                 return **child;
@@ -105,11 +126,9 @@ class Quadtree{
         }
         static void* operator new(size_t size) {
             void* ptr = malloc(size);
-            std::cout << "malloc(size: "<< size << ") -> ptr: " << ptr << "\n";
             return ptr;
         }
         static void operator delete(void* ptr) {
-            std::cout << "free(ptr: " << ptr << ") -> void\n";
             free(ptr);
         }
         void print() {
@@ -118,26 +137,23 @@ class Quadtree{
     };
     public:
     Quadtree() = default;
-    Quadtree(int x, int y, int w, int h)
-        : X(x), Y(y), W(w), H(h) {
-            fprintf(stdout, "%p = Quadtree(%d, %d, %d, %d)\n", this, x, y, w, h);
-        }
+    Quadtree(float x, float y, float w, float h)
+    : X(x), Y(y), W(w), H(h) {
+    }
     ~Quadtree() {
-        fprintf(stdout, "delete %p\n", this);
         if (size > threshhold) {
             delete[] subtrees;
         }
     };
     Iterator begin() const {
-        fprintf(stdout, "%p.begin()\n", this);
         return Iterator(this);
     }
     Iterator end() const {
-        fprintf(stdout, "%p.end() -> {%p, NULL, %zu}\n", this, this, size > threshhold ? 4 : size);
         return {
             this, NULL, size > threshhold ? 4 : size
         };
     }
+    bool test();
     void printIterators(int depth = 0) {
         for (int i = 0; i < depth; i++) {
             std::cout << "\t";
@@ -154,47 +170,45 @@ class Quadtree{
         }
         std::cout << "end: ";
         end().print();
+        for (int i = 0; i < depth+1; i++) {
+            std::cout << "\t";
+        }
         std::cout << "size: " << size << "\n";
     }
+    void pushToSubtree(T item) {
+        bool south = item.y >= Y+H/2;
+        bool east = item.x >= X+W/2;
+        subtrees[east + (south << 1)].push(item);
+    }
     void push(T item) {
-        if constexpr (std::is_floating_point_v<decltype(T::x)>) {
-            fprintf(stdout, "%p.push({%f, %f})", this, item.x, item.y);
-        } else if (std::is_integral_v<decltype(T::x)>) {
-            fprintf(stdout, "%p.push({%d, %d})\n", this, item.x, item.y);
-        }
         if (item.x < X || item.x > X+W || item.y < Y || item.y > Y+H) {
-            fprintf(stdout, "\toutside of me\n");
             return;
         }
         if (size > threshhold) {
-            bool south = item.y >= Y+H/2;
-            bool east = item.x >= X+W/2;
-            fprintf(stdout, "\tin child %d\n", east + (south << 1));
-            subtrees[east + (south << 1)].push(item);
+            pushToSubtree(item);
             size++;
         } else if (size == threshhold) {
             T tmp[threshhold];
-            std::memmove(tmp, items, sizeof(tmp));
+            std::memcpy(tmp, items, sizeof(tmp));
             subtrees = new Quadtree<T, threshhold>[4];
-            fprintf(stdout, "\tgrowing: (%p %p %p %p)\n", subtrees+0, subtrees+1, subtrees+2, subtrees+3);
             subtrees[0] = Quadtree<T, threshhold>(X    , Y    , W/2, H/2); // NW
             subtrees[1] = Quadtree<T, threshhold>(X+W/2, Y    , W/2, H/2); // NE
             subtrees[2] = Quadtree<T, threshhold>(X    , Y+H/2, W/2, H/2); // SW
             subtrees[3] = Quadtree<T, threshhold>(X+W/2, Y+H/2, W/2, H/2); // SE
             size++;
             for (size_t i = 0; i < threshhold; i++) {
-                push(tmp[i]);
+                pushToSubtree(tmp[i]);
             }
-            push(item);
+            pushToSubtree(item);
+            auto sum = subtrees[0].size + subtrees[1].size + subtrees[2].size + subtrees[3].size;
+            assert(size == sum);
         } else {
             items[size++] = item;
         }
     }
-    std::vector<T> get(int x, int y, int w, int h) const {
+    std::vector<T> get(float x, float y, float w, float h) const {
         std::vector<T> ret;
-        fprintf(stdout, "%p.get(%d, %d, %d, %d) -> ", this, x, y, w, h);
         if (x+w < X || x > X+W || y+h < Y || y > Y+H) {
-            fprintf(stdout, "0\n");
             return ret;
         }
         if (size > threshhold) {
@@ -206,7 +220,6 @@ class Quadtree{
                     newElements.end()
                 );
             }
-            fprintf(stdout, "%zu\n", ret.size());
             return ret;
         }
         for (size_t i = 0; i < threshhold; i++) {
@@ -215,16 +228,59 @@ class Quadtree{
             }
             ret.push_back(items[i]);
         }
-        fprintf(stdout, "%zu\n", ret.size());
         return ret;
     }
-    private:
-    int X, Y, W, H;
+    std::vector<T> get(float x, float y, float r) const {
+        std::vector<T> ret;
+        if (x+r < X || x > X+W || y+r < Y || y > Y+H) {
+            return ret;
+        }
+        if (size > threshhold) {
+            for (int i = 0; i < 4; i++) {
+                const std::vector<T> newElements = subtrees[i].get(x, y, r);
+                ret.insert(
+                    ret.end(),
+                    newElements.begin(),
+                    newElements.end()
+                );
+            }
+            return ret;
+        }
+        for (size_t i = 0; i < threshhold; i++) {
+            if (dist2(items[i].x, items[i].y, X, Y) <= r*r) {
+                ret.push_back(items[i]);
+            }
+        }
+        return ret;
+    }
+    struct rect{
+        float x,y,w,h;
+    };
+    rect getRect() const {
+        return {X,Y,W,H};
+    }
+    size_t getSize() const {
+        return size;
+    }
+    static constexpr auto threshold = threshhold;
+    std::array<const Quadtree*, 4> getSubtrees() const {
+        if (size > threshhold) {
+            return {&subtrees[0], &subtrees[1], &subtrees[2], &subtrees[3]};
+        }
+        return {};
+    }
     private:
     std::size_t size = 0;
+    float X, Y, W, H;
     union{
         Quadtree<T, threshhold>* subtrees = nullptr;
         // NW, NE, SW, SE
         T items[threshhold];
     };
+    private:
+        static float dist2(float x1, float y1, float x2, float y2) {
+            const float dx = x1-x2;
+            const float dy = y1-y2;
+            return dx*dx+dy*dy;
+        }
 };

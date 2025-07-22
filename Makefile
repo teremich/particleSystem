@@ -16,12 +16,13 @@ else ifeq ($(config),release)
 
 else ifeq ($(config),test)
   particleSystem_config = test
+  test_config = test
 
 else
   $(error "invalid configuration $(config)")
 endif
 
-PROJECTS := particleSystem
+PROJECTS := particleSystem test
 
 .PHONY: all clean help $(PROJECTS) 
 
@@ -33,8 +34,15 @@ ifneq (,$(particleSystem_config))
 	@${MAKE} --no-print-directory -C . -f particleSystem.make config=$(particleSystem_config)
 endif
 
+test:
+ifneq (,$(test_config))
+	@echo "==== Building test ($(test_config)) ===="
+	@${MAKE} --no-print-directory -C . -f test.make config=$(test_config)
+endif
+
 clean:
 	@${MAKE} --no-print-directory -C . -f particleSystem.make clean
+	@${MAKE} --no-print-directory -C . -f test.make clean
 
 help:
 	@echo "Usage: make [config=name] [target]"
@@ -48,5 +56,6 @@ help:
 	@echo "   all (default)"
 	@echo "   clean"
 	@echo "   particleSystem"
+	@echo "   test"
 	@echo ""
 	@echo "For more information, see https://github.com/premake/premake-core/wiki"

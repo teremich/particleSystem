@@ -2,23 +2,25 @@ workspace "particleSystems"
     configurations {"debug", "release", "test"}
     preferredtoolarchitecture "x86_64"
     startproject "particleSystem"
-
-project "particleSystem"
-    kind "ConsoleApp"
+    -- system "Linux"
     language "C++"
     cppdialect "C++latest"
     targetdir "bin/%{cfg.buildcfg}"
     objdir "build/%{cfg.buildcfg}"
     warnings "Extra"
-    -- exceptionhandling "Off"
     architecture "x64"
+    linkoptions {"-Wl,-rpath /home/emty/.local/lib64"}
+    
+project "particleSystem"
+    kind "ConsoleApp"
+    exceptionhandling "Off"
 
     files {
-        "src/**.c*"
+        "src/main.cpp"
     }
 
     libdirs {
-        "/usr/lib/",
+        
         "vendor/SDL/build/%{cfg.buildcfg}",
     }
     links {
@@ -34,7 +36,7 @@ project "particleSystem"
     }
 
     filter "configurations:debug"
-        defines {"_DEBUG"}
+        defines {"PS_DEBUG"}
         symbols "On"
         runtime "Debug"
     
@@ -57,3 +59,46 @@ project "particleSystem"
         }
         optimize "On"
         runtime "Release"
+
+project "test"
+    kind "ConsoleApp"
+    language "C++"
+    cppdialect "C++latest"
+    targetdir "bin/%{cfg.buildcfg}"
+    objdir "build/%{cfg.buildcfg}"
+    warnings "Extra"
+    exceptionhandling "On"
+    architecture "x64"
+
+    files {
+        "src/test.cpp"
+    }
+
+    libdirs {
+        "/usr/lib/",
+        "vendor/SDL/build/%{cfg.buildcfg}",
+    }
+    links {
+        "SDL3",
+        "m",
+    }
+
+    includedirs {
+        "/usr/include/",
+        "include/",
+        "src/",
+        "vendor/SDL/include/"
+    }
+
+    removeconfigurations {"release", "debug"}
+    
+    filter "configurations:test"
+        buildoptions {"-fsanitize=address"}
+        linkoptions {"-fsanitize=address"}
+        flags {
+            "FatalWarnings",
+            "ShadowedVariables",
+            "UndefinedIdentifiers",
+        }
+        runtime "Debug"
+        symbols "On"

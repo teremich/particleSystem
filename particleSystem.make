@@ -37,10 +37,10 @@ ifeq ($(config),debug)
 TARGETDIR = bin/debug
 TARGET = $(TARGETDIR)/particleSystem
 OBJDIR = build/debug
-DEFINES += -D_DEBUG
+DEFINES += -DPS_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra -std=c++20
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib -Lvendor/SDL/build/debug -L/usr/lib64 -m64
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra -std=c++20 -fno-exceptions
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/debug -L/usr/lib64 -m64 -Wl,-rpath /home/emty/.local/lib64
 
 else ifeq ($(config),release)
 TARGETDIR = bin/release
@@ -48,17 +48,17 @@ TARGET = $(TARGETDIR)/particleSystem
 OBJDIR = build/release
 DEFINES +=
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -O2 -Wall -Wextra
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -O2 -Wall -Wextra -std=c++20
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib -Lvendor/SDL/build/release -L/usr/lib64 -m64 -s
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -O2 -Wall -Wextra -std=c++20 -fno-exceptions
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/release -L/usr/lib64 -m64 -s -Wl,-rpath /home/emty/.local/lib64
 
 else ifeq ($(config),test)
 TARGETDIR = bin/test
 TARGET = $(TARGETDIR)/particleSystem
-OBJDIR = build/test
+OBJDIR = build/test/test/particleSystem
 DEFINES +=
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -g -Wall -Wextra -fsanitize=address
-ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -g -Wall -Wextra -std=c++20 -fsanitize=address
-ALL_LDFLAGS += $(LDFLAGS) -L/usr/lib -Lvendor/SDL/build/test -L/usr/lib64 -m64 -fsanitize=address
+ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -g -Wall -Wextra -std=c++20 -fno-exceptions -fsanitize=address
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/test -L/usr/lib64 -m64 -Wl,-rpath /home/emty/.local/lib64 -fsanitize=address
 
 endif
 
