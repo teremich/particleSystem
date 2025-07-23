@@ -60,45 +60,45 @@ project "particleSystem"
         optimize "On"
         runtime "Release"
 
-project "test"
-    kind "ConsoleApp"
-    language "C++"
-    cppdialect "C++latest"
-    targetdir "bin/%{cfg.buildcfg}"
-    objdir "build/%{cfg.buildcfg}"
-    warnings "Extra"
-    exceptionhandling "On"
-    architecture "x64"
+-- project "test"
+--     kind "ConsoleApp"
+--     language "C++"
+--     cppdialect "C++latest"
+--     targetdir "bin/%{cfg.buildcfg}"
+--     objdir "build/%{cfg.buildcfg}"
+--     warnings "Extra"
+--     exceptionhandling "On"
+--     architecture "x64"
 
-    files {
-        "src/test.cpp"
-    }
+--     files {
+--         "src/test.cpp"
+--     }
 
-    libdirs {
-        "/usr/lib/",
-        "vendor/SDL/build/%{cfg.buildcfg}",
-    }
-    links {
-        "SDL3",
-        "m",
-    }
+--     libdirs {
+--         "/usr/lib/",
+--         "vendor/SDL/build/%{cfg.buildcfg}",
+--     }
+--     links {
+--         "SDL3",
+--         "m",
+--     }
 
-    includedirs {
-        "/usr/include/",
-        "include/",
-        "src/",
-        "vendor/SDL/include/"
-    }
+--     includedirs {
+--         "/usr/include/",
+--         "include/",
+--         "src/",
+--         "vendor/SDL/include/"
+--     }
 
-    removeconfigurations {"release", "debug"}
+--     removeconfigurations {"release", "debug"}
     
-    filter "configurations:test"
-        buildoptions {"-fsanitize=address"}
-        linkoptions {"-fsanitize=address"}
-        flags {
-            "FatalWarnings",
-            "ShadowedVariables",
-            "UndefinedIdentifiers",
-        }
-        runtime "Debug"
-        symbols "On"
+--     filter "configurations:test"
+--         buildoptions {"-fsanitize=address"}
+--         linkoptions {"-fsanitize=address"}
+--         flags {
+--             "FatalWarnings",
+--             "ShadowedVariables",
+--             "UndefinedIdentifiers",
+--         }
+--         runtime "Debug"
+--         symbols "On"

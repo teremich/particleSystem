@@ -43,7 +43,12 @@ struct App{
             bool operator!=(const vec2& rhs) const {
                 return x != rhs.x || y != rhs.y;
             }
+            friend std::ostream& operator<<(std::ostream& cout, const vec2& self) {
+                cout << "{x: " << self.x << ", y: " << self.y << "}";
+                return cout;
+            }
             vec2& normalize() {
+                assert(x!=0 || y!=0);
                 float mag = std::sqrt(x*x + y*y);
                 x /= mag;
                 y /= mag;
@@ -68,6 +73,10 @@ struct App{
         bool operator==(const Point& rhs) const {
             return rhs.type == type && rhs.x == x && rhs.y == y;
         }
+        friend std::ostream& operator<<(std::ostream& cout, const Point& self) {
+            cout << "{x: " << self.x << ", y: " << self.y << ", vx: " << self.vx << ", vy: " << self.vy << ", type: " << (int)self.type << "}";
+            return cout;
+        }
         void print() const {
             fprintf(stdout, "{%f, %f}\n", x, y);
         }
@@ -78,20 +87,18 @@ struct App{
     SDL_Color colors[Point::PointType::END];
 };
 
-App::Point::vec2 calcForce(float attracionMatrix[App::Point::PointType::END][App::Point::PointType::END], App::Point& p, const App::Point& other) {
+App::Point::vec2 calcForce(float attracionMatrix[App::Point::PointType::END][App::Point::PointType::END], const App::Point& p, const App::Point& other) {
     App::Point::vec2 dir = p.pos - other.pos;
-    float dist2 = dir.x*dir.x+dir.y*dir.y;
+    const float dist2 = dir.x*dir.x+dir.y*dir.y;
     dir.normalize();
-    dir *= 30;
-    if (dist2 < 10) { // PUSH AWAY, TOO CLOSE
-        float mag = 2;
-        dir *= mag;
-    } else if (dist2 < 100) { // INTERACTION
-        float mag = attracionMatrix[p.type][other.type];
-        dir *= -mag;
-    } else { // NO INTERACTION, TOO FAR
+    dir *= 1./dist2;
+    float mag = attracionMatrix[p.type][other.type];
+    if (dist2 < 10*10) { // PUSH AWAY, TOO CLOSE
+        mag = -1;
+    } else if (dist2 > 300*300) { // NO INTERACTION, TOO FAR
         return {0, 0};
     }
+    dir *= -mag;
     return dir;
 }
 
@@ -100,11 +107,12 @@ void applyForce(float attracionMatrix[App::Point::PointType::END][App::Point::Po
         if (other == p) {
             continue;
         }
-        p.vel += calcForce(attracionMatrix, p, other);
+        const auto force = calcForce(attracionMatrix, p, other);
+        p.vel += force;
     }
 }
 
-void debugger(const char* info, ...) {
+void debugger(const char* info = "", ...) {
     std::va_list list;
     va_start(list, info);
     va_end(list);
@@ -118,8 +126,23 @@ void updateParticles(App& particles, long delta) {
 
     for (App::Point p : particles.A) {
         count++;
-        const auto hood = particles.A.get(p.x-50, p.y+50, 10);
+        debugger("hood");
+        const auto hood = particles.A.get(p.x-50, p.y-50, 300);
         applyForce(particles.attracionMatrix, hood, p);
+        p.vel *= std::pow(0.99, delta/10e6);
+        int width, height;
+        SDL_GetWindowSize(particles.window, &width, &height);
+        const float edgeRepulsion = 0.1;
+        if (p.pos.x < 5) {
+            p.vel.x += edgeRepulsion;
+        } else if (p.pos.x > width-5) {
+            p.vel.x -= edgeRepulsion;
+        }
+        if (p.pos.y < 5) {
+            p.vel.y += edgeRepulsion;
+        } else if (p.pos.y > height-5) {
+            p.vel.y -= edgeRepulsion;
+        }
         p.pos += p.vel*(delta/10e6);
         if (p.x < 0) {
             p.x = 0;
@@ -231,10 +254,10 @@ int main() {
     }
     {
         float tmp[App::Point::PointType::END][App::Point::PointType::END] = {
-            {1.0, 0.0, 0.0, 0.0},
-            {0.0, 1.0, 0.0, 0.0},
-            {0.0, 0.0, 1.0, 0.0},
-            {0.0, 0.0, 0.0, 1.0}
+            {+0.5, +0.0, +1.00, -1.0},
+            {+1.0, +1.0, -1.50, +0.0},
+            {-0.5, -0.5, -0.25, +0.0},
+            {+0.5, +0.0, +1.00, +1.0}
         };
         std::memcpy(particles.attracionMatrix, tmp, sizeof(tmp));
     }
@@ -269,8 +292,8 @@ int main() {
                 {{
                     SDL_randf()*width,
                     SDL_randf()*height,
-                    SDL_randf()-0.5f,
-                    SDL_randf()-0.5f
+                    SDL_randf()-1.0f,
+                    SDL_randf()-1.0f
                 }},
                 static_cast<App::Point::PointType>(type)
             });

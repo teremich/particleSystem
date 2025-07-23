@@ -141,8 +141,11 @@ class Quadtree{
     : X(x), Y(y), W(w), H(h) {
     }
     ~Quadtree() {
+        // std::cout << "freeing: " << this << std::endl;
         if (size > threshhold) {
             delete[] subtrees;
+            size = 0;
+            memset(items, 0, sizeof(items));
         }
     };
     Iterator begin() const {
@@ -222,7 +225,7 @@ class Quadtree{
             }
             return ret;
         }
-        for (size_t i = 0; i < threshhold; i++) {
+        for (size_t i = 0; i < size; i++) {
             if (items[i].x < x || items[i].x > x+w || items[i].y < y || items[i].y > y+h) {
                 continue;
             }
@@ -246,8 +249,8 @@ class Quadtree{
             }
             return ret;
         }
-        for (size_t i = 0; i < threshhold; i++) {
-            if (dist2(items[i].x, items[i].y, X, Y) <= r*r) {
+        for (size_t i = 0; i < size; i++) {
+            if (dist2(items[i].x, items[i].y, x, y) <= r*r) {
                 ret.push_back(items[i]);
             }
         }
