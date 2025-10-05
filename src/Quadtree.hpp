@@ -22,75 +22,78 @@ class Quadtree{
     public:
     typedef T pt;
     struct Iterator{
-        const Quadtree* parent;
-        Iterator* child = NULL;
+        const Quadtree* tree;
+        Iterator* next = NULL;
         size_t index = 0;
         
-        Iterator() : parent(NULL) {
+        // O(1), O(1)
+        Iterator() : tree(NULL) {
         }
         
+        // fast but still O(log n), O(1)
         ~Iterator() {
-            if (!parent) {
+            if (!tree) {
                 return;
             }
-            if (child && parent->size > threshhold) {
-                delete child;
-                child = NULL;
+            if (next && tree->size > threshhold) {
+                delete next;
+                next = NULL;
             }
         }
         
+        // O(1), O()
         void initChild() {
             for (; index < 4; index++) {
-                assert(child == NULL);
-                child = new Iterator(std::move(parent->subtrees[index].begin()));
-                if (*child != parent->subtrees[index].end()) {
+                assert(next == NULL);
+                next = new Iterator(std::move(tree->subtrees[index].begin()));
+                if (*next != tree->subtrees[index].end()) {
                     break;
                 }
-                delete child;
-                child = NULL;
+                delete next;
+                next = NULL;
             }
         }
         
-        explicit Iterator(const Quadtree* self) : parent(self) {
-            if (parent->size > threshhold) {
+        explicit Iterator(const Quadtree* self) : tree(self) {
+            if (tree->size > threshhold) {
                 initChild();
             }
         }
         
         Iterator(const Quadtree* parentTree, Iterator* childIterator, size_t idx)
-        : parent(parentTree), child(childIterator), index(idx) {
+        : tree(parentTree), next(childIterator), index(idx) {
         }
         
         Iterator& operator=(Iterator&& moveFrom) {
             this->~Iterator();
-            parent = moveFrom.parent;
-            child = moveFrom.child;
+            tree = moveFrom.tree;
+            next = moveFrom.next;
             index = moveFrom.index;
-            moveFrom.parent = 0;
-            moveFrom.child = 0;
+            moveFrom.tree = 0;
+            moveFrom.next = 0;
             moveFrom.index = 0;
             return *this;
         }
         
         Iterator(Iterator&& moveFrom) :
-        parent(moveFrom.parent), child(moveFrom.child), index(moveFrom.index) {
-            moveFrom.child = 0;
+        tree(moveFrom.tree), next(moveFrom.next), index(moveFrom.index) {
+            moveFrom.next = 0;
             moveFrom.index = 0;
-            moveFrom.parent = 0;
+            moveFrom.tree = 0;
         }
 
         Iterator& operator++() {
-            if(next()) {
+            if(increment()) {
                 // assert(*this == parent->end());
             }
             return *this;
         }
 
-        bool next() {
-            if (parent->size > threshhold) {
-                if (child->next()) {
-                    delete child;
-                    child = NULL;
+        bool increment() {
+            if (tree->size > threshhold) {
+                if (next->increment()) {
+                    delete next;
+                    next = NULL;
                     index++;
                     initChild();
                 }
@@ -100,8 +103,8 @@ class Quadtree{
             
             // fprintf(stdout, "index far enough: %d, this == end: %d\n", parent->size > threshhold ? index == 4 : index == parent->size, (*this == parent->end()));
             
-            assert((parent->size > threshhold ? index == 4 : index == parent->size) == (*this == parent->end()));
-            return parent->size > threshhold ? index == 4 : index == parent->size;
+            assert((tree->size > threshhold ? index == 4 : index == tree->size) == (*this == tree->end()));
+            return tree->size > threshhold ? index == 4 : index == tree->size;
         }
         
         const T* operator->() const {
@@ -109,17 +112,17 @@ class Quadtree{
         }
         
         const T& operator*() const {
-            if (parent->size > threshhold) {
-                if (!child) {
+            if (tree->size > threshhold) {
+                if (!next) {
                     exit(1);
                 }
-                return **child;
+                return **next;
             } else {
-                return parent->items[index];
+                return tree->items[index];
             }
         }
         bool operator==(const Iterator& rhs) const {
-            return parent == rhs.parent && index == rhs.index;
+            return tree == rhs.tree && index == rhs.index;
         }
         bool operator!=(const Iterator& rhs) const {
             return ! (*this == rhs);
@@ -132,14 +135,28 @@ class Quadtree{
             free(ptr);
         }
         void print() {
-            std::cout << "{" << parent << ", " << child << ", " << index << "}\n";
+            std::cout << "{" << tree << ", " << next << ", " << index << "}\n";
         }
     };
     public:
+    // O(1), O(1)
     Quadtree() = default;
+    // O(1), O(1)
     Quadtree(float x, float y, float w, float h)
     : X(x), Y(y), W(w), H(h) {
     }
+    Quadtree& operator=(Quadtree&& moveFrom) {
+        this->~Quadtree();
+        X = moveFrom.X;
+        Y = moveFrom.Y;
+        W = moveFrom.W;
+        H = moveFrom.H;
+        size = moveFrom.size;
+        std::memcpy(items, &moveFrom.items, sizeof(items));
+        moveFrom.size = 0;
+        return *this;
+    }
+    // O(1) + time of delete[], O(1)
     ~Quadtree() {
         // std::cout << "freeing: " << this << std::endl;
         if (size > threshhold) {

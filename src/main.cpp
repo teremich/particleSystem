@@ -82,7 +82,7 @@ struct App{
         }
     };
     Quadtree<Point> trees[2];
-    Quadtree<Point>& A = trees[0], B = trees[1]; // for swapping without copying
+    Quadtree<Point> *A = &trees[0], *B = &trees[1]; // for swapping without copying
     float attracionMatrix[Point::PointType::END][Point::PointType::END];
     SDL_Color colors[Point::PointType::END];
 };
@@ -121,13 +121,13 @@ void debugger(const char* info = "", ...) {
 void updateParticles(App& particles, long delta) {
     int w, h;
     SDL_GetWindowSize(particles.window, &w, &h);
-    particles.B = Quadtree<App::Point>(0, 0, w, h);
+    *particles.B = Quadtree<App::Point>(0, 0, w, h);
     size_t count = 0;
 
-    for (App::Point p : particles.A) {
+    for (App::Point p : *particles.A) {
         count++;
         debugger("hood");
-        const auto hood = particles.A.get(p.x-50, p.y-50, 300);
+        const auto hood = particles.A->get(p.x-50, p.y-50, 300);
         applyForce(particles.attracionMatrix, hood, p);
         p.vel *= std::pow(0.99, delta/10e6);
         int width, height;
@@ -163,22 +163,22 @@ void updateParticles(App& particles, long delta) {
 
         // auto size_before = particles.B.getSize();
         // p.print();
-        particles.B.push(p);
+        particles.B->push(p);
         // auto size_after = particles.B.getSize();
         // if (size_before+1 != size_after) {
         //     p.print();
         // }
     }
-    if (count != particles.A.getSize()) {
+    if (count != particles.A->getSize()) {
         fprintf(stdout, "STOP\n");
-        auto it = particles.A.begin();
-        particles.A.printIterators();
+        auto it = particles.A->begin();
+        particles.A->printIterators();
         debugger("didnt iterate over all elements of A", &particles.A);
     }
-    if (particles.A.getSize() != particles.B.getSize()) {
+    if (particles.A->getSize() != particles.B->getSize()) {
         debugger("A != B", &particles.A, &particles.B);
     }
-    auto& tmp = particles.A;
+    auto tmp = particles.A;
     particles.A = particles.B;
     particles.B = tmp;
 }
@@ -231,7 +231,7 @@ void drawRect(SDL_Renderer* renderer, const Quadtree<App::Point>& a) {
 void draw(const App& a) {
     // drawRect(a.renderer, a.A);
     SDL_SetRenderScale(a.renderer, 4, 4);
-    for (const App::Point& p : a.A) {
+    for (const App::Point& p : *a.A) {
         const auto color = a.colors[p.type];
         SDL_SetRenderDrawColor(a.renderer, color.r, color.g, color.b, color.a);
         SDL_RenderPoint(a.renderer, p.x/4, p.y/4);
@@ -285,10 +285,10 @@ int main() {
     }
     int width, height;
     SDL_GetWindowSize(particles.window, &width, &height);
-    particles.A = Quadtree<App::Point>(0, 0, width, height);
+    *particles.A = Quadtree<App::Point>(0, 0, width, height);
     for (uint8_t type = 0; type < App::Point::PointType::END; type++) {
         for (int i = 0; i < NUM_POINTS_PER_COLOR; i++) {
-            particles.A.push({
+            particles.A->push({
                 {{
                     SDL_randf()*width,
                     SDL_randf()*height,
@@ -324,7 +324,7 @@ int main() {
             std::cout << "fps: " << 1e9/avg << std::endl;
             index-=100;
         }
-        assert(particles.A.getSize() == NUM_POINTS_PER_COLOR*App::Point::PointType::END);
+        assert(particles.A->getSize() == NUM_POINTS_PER_COLOR*App::Point::PointType::END);
         delta = (end-begin).count();
         last100deltas[index++] = delta;
         begin = end;
