@@ -7,7 +7,7 @@
 #include "Quadtree.hpp"
 #include <cstdarg>
 
-#define NUM_POINTS_PER_COLOR 300
+#define NUM_POINTS_PER_COLOR 600
 
 struct App{
     SDL_Window* window = nullptr;
@@ -29,8 +29,11 @@ struct App{
                 y += rhs.y;
                 return *this;
             }
-            vec2 operator*(float scale) {
+            vec2 operator*(float scale) const {
                 return (vec2){x*scale, y*scale};
+            }
+            vec2 operator/(float scale) const {
+                return (vec2){x/scale, y/scale};
             }
             vec2& operator *=(float scale) {
                 x *= scale;
@@ -90,11 +93,13 @@ struct App{
 App::Point::vec2 calcForce(float attracionMatrix[App::Point::PointType::END][App::Point::PointType::END], const App::Point& p, const App::Point& other) {
     App::Point::vec2 dir = p.pos - other.pos;
     const float dist2 = dir.x*dir.x+dir.y*dir.y;
+    if (!dist2) {
+        return {0, 0};
+    }
     dir.normalize();
-    dir *= 1./dist2;
-    float mag = attracionMatrix[p.type][other.type];
+    float mag = attracionMatrix[p.type][other.type] / dist2;
     if (dist2 < 10*10) { // PUSH AWAY, TOO CLOSE
-        mag = -1;
+        mag = -1e-1;
     } else if (dist2 > 300*300) { // NO INTERACTION, TOO FAR
         return {0, 0};
     }
@@ -102,12 +107,13 @@ App::Point::vec2 calcForce(float attracionMatrix[App::Point::PointType::END][App
     return dir;
 }
 
-void applyForce(float attracionMatrix[App::Point::PointType::END][App::Point::PointType::END], const std::vector<App::Point>& hood, App::Point& p) {
+void applyForce(float attracionMatrix[App::Point::PointType::END][App::Point::PointType::END], const std::vector<App::Point>& hood, App::Point& p, float delta) {
     for (const App::Point& other : hood) {
         if (other == p) {
             continue;
         }
         const auto force = calcForce(attracionMatrix, p, other);
+        (void)delta;
         p.vel += force;
     }
 }
@@ -128,7 +134,7 @@ void updateParticles(App& particles, long delta) {
         count++;
         debugger("hood");
         const auto hood = particles.A->get(p.x-50, p.y-50, 300);
-        applyForce(particles.attracionMatrix, hood, p);
+        applyForce(particles.attracionMatrix, hood, p, delta/10e6);
         p.vel *= std::pow(0.99, delta/10e6);
         int width, height;
         SDL_GetWindowSize(particles.window, &width, &height);
@@ -183,7 +189,7 @@ void updateParticles(App& particles, long delta) {
     particles.B = tmp;
 }
 
-bool update() {
+bool handleEvents() {
     SDL_Event event;
     while(SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -230,11 +236,11 @@ void drawRect(SDL_Renderer* renderer, const Quadtree<App::Point>& a) {
 
 void draw(const App& a) {
     // drawRect(a.renderer, a.A);
-    SDL_SetRenderScale(a.renderer, 4, 4);
+    SDL_SetRenderScale(a.renderer, 2, 2);
     for (const App::Point& p : *a.A) {
         const auto color = a.colors[p.type];
         SDL_SetRenderDrawColor(a.renderer, color.r, color.g, color.b, color.a);
-        SDL_RenderPoint(a.renderer, p.x/4, p.y/4);
+        SDL_RenderPoint(a.renderer, p.x/2, p.y/2);
     }
     SDL_SetRenderScale(a.renderer, 1, 1);
 }
@@ -273,11 +279,11 @@ int main() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         return EXIT_FAILURE;
     }
-    
+    SDL_srand(0xE110);
     if (!SDL_CreateWindowAndRenderer(
         "const char* title",
         1920, 1080,
-        SDL_WINDOW_BORDERLESS | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_OPENGL,
+        SDL_WINDOW_BORDERLESS | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_VULKAN,
         &particles.window,
         &particles.renderer
     )) {
@@ -314,7 +320,7 @@ int main() {
             draw(particles);
         }
         SDL_RenderPresent(particles.renderer);
-        isRunning = update();
+        isRunning = handleEvents();
         const auto end = clock.now();
         while(index >= 100) {
             float avg = 0;
