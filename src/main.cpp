@@ -5,6 +5,7 @@
 #include <vector>
 #include <cmath>
 #include "Quadtree.hpp"
+#include "SDL3/SDL_rect.h"
 #include <cstdarg>
 
 #define NUM_POINTS_PER_COLOR 600
@@ -223,10 +224,8 @@ bool handleEvents() {
 void drawRect(SDL_Renderer* renderer, const Quadtree<App::Point>& a) {
     const auto [x,y,w,h] = a.getRect();
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderLine(renderer, x    , y    , x+w-1, y    );
-    SDL_RenderLine(renderer, x+w-1, y    , x+w-1, y+h-1);
-    SDL_RenderLine(renderer, x+w-1, y+h-1, x    , y+h-1);
-    SDL_RenderLine(renderer, x    , y+h-1, x    , y    );
+    const SDL_FRect rect{x+1, y+1, w-2, y-2};
+    SDL_RenderRect(renderer, &rect);
     if (a.getSize() > a.threshold) {
         for (int i = 0; i < 4; i++) {
             drawRect(renderer, *a.getSubtrees()[i]);
@@ -243,6 +242,7 @@ void draw(const App& a) {
         SDL_RenderPoint(a.renderer, p.x/2, p.y/2);
     }
     SDL_SetRenderScale(a.renderer, 1, 1);
+    drawRect(a.renderer, *a.A);
 }
 
 static size_t frameCount = 0;
@@ -260,10 +260,10 @@ int main() {
     }
     {
         float tmp[App::Point::PointType::END][App::Point::PointType::END] = {
-            {+0.5, +0.0, +1.00, -1.0},
-            {+1.0, +1.0, -1.50, +0.0},
-            {-0.5, -0.5, -0.25, +0.0},
-            {+0.5, +0.0, +1.00, +1.0}
+            {-1.95, -0.377, 0.69, 0.67},
+            {1.25, -1.99, 1.99, 0.002},
+            {0.37, 0.47, -0.73, 1.414},
+            {0.48, -1.00, +1.001, +1.0}
         };
         std::memcpy(particles.attracionMatrix, tmp, sizeof(tmp));
     }
