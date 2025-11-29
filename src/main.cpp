@@ -242,7 +242,7 @@ void draw(const App& a) {
         SDL_RenderPoint(a.renderer, p.x/2, p.y/2);
     }
     SDL_SetRenderScale(a.renderer, 1, 1);
-    drawRect(a.renderer, *a.A);
+    // drawRect(a.renderer, *a.A);
 }
 
 static size_t frameCount = 0;
@@ -274,7 +274,7 @@ int main() {
             {0  , 0  , 255, 255},
             {255, 255, 0  , 255},
         };
-        std::memcpy(particles.colors, tmp, sizeof(tmp));
+        std::memcpy(particles.colors, tmp, sizeof(particles.colors));
     }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         return EXIT_FAILURE;
@@ -323,11 +323,13 @@ int main() {
         isRunning = handleEvents();
         const auto end = clock.now();
         while(index >= 100) {
-            float avg = 0;
+            [[maybe_unused]] float avg = 0;
             for (int i = 0; i < 100; i++) {
                 avg += last100deltas[i]/100.;
             }
-            std::cout << "fps: " << 1e9/avg << std::endl;
+#           if 0
+                std::cout << "fps: " << 1e9/avg << std::endl;
+#           endif
             index-=100;
         }
         assert(particles.A->getSize() == NUM_POINTS_PER_COLOR*App::Point::PointType::END);
