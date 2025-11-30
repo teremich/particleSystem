@@ -9,7 +9,6 @@ workspace "particleSystems"
     objdir "build/%{cfg.buildcfg}"
     warnings "Extra"
     architecture "x64"
-    linkoptions {"-Wl,-rpath /home/emty/.local/lib64"}
     
 project "particleSystem"
     kind "ConsoleApp"

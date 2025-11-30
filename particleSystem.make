@@ -40,7 +40,7 @@ OBJDIR = build/debug
 DEFINES += -DPS_DEBUG
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -g -Wall -Wextra -std=c++20 -fno-exceptions
-ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/debug -L/usr/lib64 -m64 -Wl,-rpath /home/emty/.local/lib64
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/debug -L/usr/lib64 -m64
 
 else ifeq ($(config),release)
 TARGETDIR = bin/release
@@ -49,7 +49,7 @@ OBJDIR = build/release
 DEFINES +=
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -O2 -Wall -Wextra
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -O2 -Wall -Wextra -std=c++20 -fno-exceptions
-ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/release -L/usr/lib64 -m64 -s -Wl,-rpath /home/emty/.local/lib64
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/release -L/usr/lib64 -m64 -s
 
 else ifeq ($(config),test)
 TARGETDIR = bin/test
@@ -58,7 +58,7 @@ OBJDIR = build/test
 DEFINES +=
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -g -Wall -Wextra -fsanitize=address
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Werror -Wshadow -Wundef -g -Wall -Wextra -std=c++20 -fno-exceptions -fsanitize=address
-ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/test -L/usr/lib64 -m64 -Wl,-rpath /home/emty/.local/lib64 -fsanitize=address
+ALL_LDFLAGS += $(LDFLAGS) -Lvendor/SDL/build/test -L/usr/lib64 -m64 -fsanitize=address
 
 endif
 
